@@ -91,6 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
+-- sean - todo eventually should find a way to have this variable derived from the system, by getting the system to check if a nerd font is being used
 vim.g.have_nerd_font = false
 
 -- [[ Setting options ]]
@@ -102,7 +103,7 @@ vim.g.have_nerd_font = false
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -148,7 +149,8 @@ vim.o.splitbelow = true
 --   See `:help lua-options`
 --   and `:help lua-guide-options`
 vim.o.list = true
-vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+-- sean - 20260413 - changed the kickstart.nvim trail . to ⋅
+vim.opt.listchars = { tab = '» ', trail = '⋅', nbsp = '␣' }
 
 -- Preview substitutions live, as you type!
 vim.o.inccommand = 'split'
@@ -204,12 +206,12 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 -- vim.keymap.set('n', '<down>', '<cmd>echo "Use j to move!!"<CR>')
 
 -- Keybinds to make split navigation easier.
---  Use CTRL+<hjkl> to switch between windows
+--  Use CTRL+<hkl> to switch between windows
 --
 --  See `:help wincmd` for a list of all window commands
 vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
 vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('n', '<C->', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
@@ -242,6 +244,10 @@ end
 ---@type vim.Option
 local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
+
+-- sean - 20260413 - added this so can fold and unfold markdown
+vim.opt_local.foldmethod = 'expr'
+vim.opt_local.foldexpr = 'v:lua.vim.treesitter.foldexpr()'
 
 -- [[ Configure and install plugins ]]
 --
@@ -651,6 +657,8 @@ require('lazy').setup({
       --
       -- You can press `g?` for help in this menu.
       local ensure_installed = vim.tbl_keys(servers or {})
+      -- Sean Lee - 20260411 - copied from medium article but not sure if it helps
+      ensure_installed = vim.tbl_filter(function(k) return k ~= 'lua_ls' and k ~= 'stylua' end, ensure_installed)
       vim.list_extend(ensure_installed, {
         -- You can add other tools here that you want Mason to install
       })
@@ -866,7 +874,16 @@ require('lazy').setup({
       --  Check out: https://github.com/nvim-mini/mini.nvim
     end,
   },
-
+  -- sean - 20260413 - added this for markdown viewing
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.nvim' }, -- if you use the mini.nvim suite
+    -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-mini/mini.icons' },        -- if you use standalone mini plugins
+    -- dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
+    ---@module 'render-markdown'
+    ---@type render.md.UserConfig
+    opts = {},
+  },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     lazy = false,
@@ -967,6 +984,54 @@ require('lazy').setup({
     },
   },
 })
-
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+
+-- Sean Lee - 20260411 - below was just copied from chatgpt to resolve LSP issues idk
+-- local lspconfig = require('lspconfig')
+--
+-- local is_termux = vim.env.PREFIX and vim.env.PREFIX:match("com.termux")
+--
+-- if is_termux then
+--   -- Termux: use system-installed lua-language-server
+--   lspconfig.lua_ls.setup {
+--     cmd = { "lua-language-server" },
+--     settings = {
+--       Lua = {
+--         runtime = { version = "LuaJIT" },
+--         diagnostics = { globals = { "vim" } },
+--         workspace = {
+--           library = vim.api.nvim_get_runtime_file("", true),
+--         },
+--       },
+--     },
+--   }
+-- else
+--   -- Normal Linux: let Mason handle it
+--   lspconfig.lua_ls.setup {
+--     settings = {
+--       Lua = {
+--         runtime = { version = "LuaJIT" },
+--         diagnostics = { globals = { "vim" } },
+--         workspace = {
+--           library = vim.api.nvim_get_runtime_file("", true),
+--         },
+--       },
+--     },
+--   }
+-- end
+--
+-- local ensure = { "lua_ls", "clangd", "pyright" }
+--
+--
+-- local is_termux = vim.env.PREFIX and vim.env.PREFIX:match("com.termux")
+--
+-- if is_termux then
+--   ensure = vim.tbl_filter(function(server)
+--     return server ~= "lua_ls"
+--   end, ensure)
+-- end
+--
+-- require("mason-lspconfig").setup {
+--   ensure_installed = ensure,
+-- }
